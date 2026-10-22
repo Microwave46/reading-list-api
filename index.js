@@ -33,7 +33,7 @@ app.get('/books/:id', async (req, res) => {
     return res.status(400).json({ error: 'Invalid id' });
   }
   try {
-    const result = await pool.query('SELECT * FROM books WHERE id = $1', [req.params.id]);
+    const result = await pool.query('SELECT * FROM books WHERE id = $1', [id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Book not found' });
     }
@@ -98,8 +98,8 @@ app.delete('/books/:id', async(req, res)=>{
   try{
     const result = await pool.query('DELETE FROM books WHERE id = $1 RETURNING *',[id]);
     const deletedBook = result.rows[0];
-    if(result.rows.length===0){res.status(404).json({error: 'Book not found'})}
-    res.status(204).send;
+    if(result.rows.length===0){return res.status(404).json({error: 'Book not found'})}
+    res.status(204).send();
   }
   catch(err){
     console.error(err);
