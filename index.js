@@ -1,3 +1,4 @@
+const pool = require('./db');
 const express = require('express');
 const app = express();
 const VALID_STATUS = ['todo', 'reading', 'done'];
@@ -11,64 +12,99 @@ app.get('/health', (req, res) =>{
     res.json({ status: 'ok' })
 });
 
-let books = [
-    {id:1, title: 'Atomic Habits', author: 'Jame Clear', status: 'reading'},
-    {id:2, title: 'Clean Code', author: 'Robert C. Martin', status: 'todo'},
-]
-let nextId = 3;
+function parseId(value) {
+  const id = Number(value);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
 
-app.get('/books', (req,res) =>{
-    res.json(books)
+app.get('/books', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM books ORDER BY id');
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
-app.get('/books/:id', (req,res) =>{
-    const id = Number(req.params.id);
-    const book = books.find((b)=>b.id===id);
-
-    if(!book){
-        return res.status(404).json({error: 'Book not found'});
+app.get('/books/:id', async (req, res) => {
+  const id = parseId(req.params.id);
+  if (id === null) {
+    return res.status(400).json({ error: 'Invalid id' });
+  }
+  try {
+    const result = await pool.query('SELECT * FROM books WHERE id = $1', [req.params.id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Book not found' });
     }
-    res.json(book);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
-app.post('/books', (req, res) => {
-    const { title, author } = req.body;
-
-    if (!title || !author) {
-        return res.status(400).json({ error: 'title and author are required' });
-    }
-
-    const newBook = { id: nextId++, title, author, status: 'todo' };
-    books.push(newBook);
+app.post('/books', async (req, res)=>{
+  const { title, author } = req.body;
+  if (!title || !author) {
+      return res.status(400).json({ error: 'title and author are required' });
+  }
+  try{
+    const result = await pool.query(
+      'INSERT INTO books (title, author, status) VALUES ($1, $2, $3) RETURNING *',[title, author, 'todo']
+    );
+    const newBook = result.rows[0];
     res.status(201).json(newBook);
+  }
+  catch(err){
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error'});
+  }
 });
 
-app.put('/books/:id', (req, res) => {
-    const id = Number(req.params.id);
-    const book = books.find((b)=>b.id===id);
-    if(!book){
-        return res.status(404).json({error: 'Book not found'});
-    }
-    const {title, author, status} = req.body;
-    if (status !== undefined && !VALID_STATUS.includes(status)) {
-        return res.status(400).json({ error: 'status must be todo, reading, or done' });
-    }
-    const updates = {title, author, status};
-    Object.keys(updates).forEach((key) => {
-        if (updates[key] !== undefined) book[key] = updates[key];
-    });
-    
-    res.json(book)
+app.put('/books/:id', async(req,res)=>{
+  const id = parseId(req.params.id);
+  if (id === null) {
+    return res.status(400).json({ error: 'Invalid id' });
+  }
+  const { title, author, status} = req.body;
+  if (status !== undefined && !VALID_STATUS.includes(status)) {
+    return res.status(400).json({ error: 'status must be todo, reading, or done' });
+  }
+  try{
+    const result = await pool.query(
+      `UPDATE books 
+        SET title = COALESCE($1, title),
+        author = COALESCE($2, author),
+        status = COALESCE($3, status)
+        WHERE id = $4
+        RETURNING *`,
+      [title, author, status, id]
+    );
+    if (result.rows.length === 0) {return res.status(404).json({ error: 'Book not found' })}
+    res.json(result.rows[0]);
+  }
+  catch(err){
+    console.error(err);
+    res.status(500).json({error: 'Internal server error'});
+  }
 });
 
-app.delete('/books/:id', (req, res) => {
-    const id = Number(req.params.id);
-    const index = books.findIndex((b)=>b.id===id);
-    if(index===-1){
-        return res.status(404).json({error: 'Book not found'});
-    }
-    books.splice(index, 1);
-    res.status(204).send();
+app.delete('/books/:id', async(req, res)=>{
+  const id = parseId(req.params.id);
+  if (id === null) {
+    return res.status(400).json({ error: 'Invalid id' });
+  }
+  try{
+    const result = await pool.query('DELETE FROM books WHERE id = $1 RETURNING *',[id]);
+    const deletedBook = result.rows[0];
+    if(result.rows.length===0){res.status(404).json({error: 'Book not found'})}
+    res.status(204).send;
+  }
+  catch(err){
+    console.error(err);
+    res.status(500).json({error: 'Internal server error'});
+  }
 });
 
 const PORT = 3000;
