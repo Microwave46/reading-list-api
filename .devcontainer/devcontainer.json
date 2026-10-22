@@ -1,0 +1,8 @@
+{
+  "name": "Reading List API",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "forwardPorts": [3000, 5432],
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y postgresql-client"
+}
