@@ -1,3 +1,4 @@
+require('dotenv').config();
 const pool = require('./db');
 const express = require('express');
 const app = express();
@@ -106,7 +107,7 @@ app.delete('/books/:id', async(req, res)=>{
   }
 });
 
-const PORT = 3000;
+const PORT = process.env.port || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
