@@ -45,7 +45,7 @@ app.get('/books/:id', async (req, res) => {
 });
 
 app.post('/books', async (req, res)=>{
-  const { title, author } = req.body;
+  const { title, author } = req.body || {};
   if (!title || !author) {
       return res.status(400).json({ error: 'title and author are required' });
   }
@@ -67,7 +67,7 @@ app.put('/books/:id', async(req,res)=>{
   if (id === null) {
     return res.status(400).json({ error: 'Invalid id' });
   }
-  const { title, author, status} = req.body;
+  const { title, author, status} = req.body || {};
   if (status !== undefined && !VALID_STATUS.includes(status)) {
     return res.status(400).json({ error: 'status must be todo, reading, or done' });
   }
@@ -97,7 +97,6 @@ app.delete('/books/:id', async(req, res)=>{
   }
   try{
     const result = await pool.query('DELETE FROM books WHERE id = $1 RETURNING *',[id]);
-    const deletedBook = result.rows[0];
     if(result.rows.length===0){return res.status(404).json({error: 'Book not found'})}
     res.status(204).send();
   }
