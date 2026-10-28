@@ -51,6 +51,3 @@ curl -X POST http://localhost:3000/books \
 - ออกแบบ REST API และเลือก HTTP status code ให้ถูกต้อง
 - ป้องกัน SQL Injection ด้วย parameterized query
 - ตรวจสอบข้อมูลที่รับเข้า (validation) ทั้งในโค้ดและระดับฐานข้อมูล
-
-## Live Demo
-(จะเติมลิงก์หลัง deploy)
